@@ -99,3 +99,27 @@ var newUrl = 'https://api.github.com/graphql'
 client.setUrl(newUrl)
 assert.equal(client.getUrl(), newUrl)
 
+var graph = graphql("https://api.github.com/graphql", {
+    method: "POST",
+    headers: {
+        "Authorization": "9fe9636aac52dcd459f899d44d1cd629fbf4f802",
+        "Content-Type": "application/json"
+    },
+    fragments: {
+        rateLimitInfo: "on RateLimit {cost,remaining,resetAt}"
+    }
+});
+graph(`
+    query repo($name: String!, $owner: String!){
+        repository(name:$name, owner:$owner){
+            id      
+        }
+    }
+`,{
+    name: "freeCodeCamp",
+    owner: "freeCodeCamp"
+}).then(function(response){
+    console.log(response);
+}).catch(function(error){
+    console.log(error);
+});

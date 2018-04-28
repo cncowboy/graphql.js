@@ -1,5 +1,4 @@
 (function () {
-  var FlyIO = require("flyio");
   function __extend() {
     var extended = {}, deep = false, i = 0, length = arguments.length
     if (Object.prototype.toString.call( arguments[0] ) == '[object Boolean]') {
@@ -68,7 +67,8 @@
     } else {
       var body = "query=" + encodeURIComponent(data.query) + "&variables=" + encodeURIComponent(JSON.stringify(data.variables))
     }
-    var fly = new FlyIO();
+    //var FlyIO = require("flyio");
+    var fly = require("flyio");//new FlyIO;
     fly.interceptors.request.use((request)=>{
         //给所有请求添加自定义header
 
@@ -87,10 +87,11 @@
         return request;
     });
     urlParts = parseUrl(url);
-    var baseURL = urlParts["protocol"]+"//"+urlParts["host"];
+    var baseUrl = urlParts["protocol"]+"//"+urlParts["host"];
     if (urlParts["port"]!="") {
         baseUrl += ":"+urlParts['port'];
     }
+    baseUrl += "/";
     fly.config.baseURL=baseUrl;
     fly.request(urlParts['pathname'], body, {method: method}).then(resp=>{
         callback(JSON.parse(resp), 200);
