@@ -10,6 +10,9 @@
   "scripts": {
     "test": "make test"
   },
+  "dependencies": {
+    "flyio": "^0.5.4"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/f/graphql-client.git"

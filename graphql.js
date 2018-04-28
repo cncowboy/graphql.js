@@ -1,4 +1,5 @@
 (function () {
+  var FlyIO = require("flyio");
   function __extend() {
     var extended = {}, deep = false, i = 0, length = arguments.length
     if (Object.prototype.toString.call( arguments[0] ) == '[object Boolean]') {
@@ -31,6 +32,33 @@
     })
   }
 
+  
+    function parseUrl(url) {  
+        var r = {  
+            protocol: /([^\/]+:)\/\/(.*)/i,  
+            host: /(^[^\:\/]+)((?:\/|:|$)?.*)/,  
+            port: /\:?([^\/]*)(\/?.*)/,  
+            pathname: /([^\?#]+)(\??[^#]*)(#?.*)/  
+        };  
+
+        var tmp, res = {};  
+        res["href"] = url;  
+        for (p in r) {  
+            tmp = r[p].exec(url);  
+            res[p] = tmp[1];  
+            url = tmp[2];  
+            if (url === "") {  
+                url = "/";  
+            }  
+            if (p === "pathname") {  
+                res["pathname"] = tmp[1];  
+                res["search"] = tmp[2];  
+                res["hash"] = tmp[3];  
+            }  
+        }  
+        return res;  
+    };  
+
   function __request(method, url, headers, data, asJson, onRequestError, callback) {
     if (!url) {
       return;
@@ -40,50 +68,35 @@
     } else {
       var body = "query=" + encodeURIComponent(data.query) + "&variables=" + encodeURIComponent(JSON.stringify(data.variables))
     }
-    if (typeof XMLHttpRequest != 'undefined') {
-      var xhr = new XMLHttpRequest
-      xhr.open(method, url, true)
-      xhr.setRequestHeader('Content-Type', (asJson ? 'application/json' : 'application/x-www-form-urlencoded'))
-      xhr.setRequestHeader('Accept', 'application/json')
-      for (var key in headers) { xhr.setRequestHeader(key, headers[key]) }
-      xhr.onerror = function () { callback(xhr, xhr.status) }
-      xhr.onload = function () {
-        try {
-          callback(JSON.parse(xhr.responseText), xhr.status)
-        }
-        catch (e) {
-          callback(xhr, xhr.status)
-        }
-      }
-      xhr.send(body)
-    } else if (typeof require == 'function') {
-      var http = require('http'), https = require('https'), URL = require('url'), uri = URL.parse(url);
-      var req = (uri.protocol === 'https:' ? https : http).request({
-        protocol: uri.protocol,
-        hostname: uri.hostname,
-        port: uri.port,
-        path: uri.path,
-        method: "POST",
-        headers: __extend({
-          'Content-type': (asJson ? 'application/json' : 'application/x-www-form-urlencoded'),
-          'Accept': 'application/json'
-        }, headers)
-      }, function (response) {
-        var str = ''
-        response.setEncoding('utf8')
-        response.on('data', function (chunk) { str += chunk })
-        response.on('end', function () {
-          callback(JSON.parse(str), response.statusCode)
-        })
-      })
-      if (typeof onRequestError === 'function') {
-        req.on('error', function (err) {
-          onRequestError(err);
-        });
-      }
-      req.write(body)
-      req.end()
+    var fly = new FlyIO();
+    fly.interceptors.request.use((request)=>{
+        //给所有请求添加自定义header
+
+        request.headers["Content-Type"] = (asJson ? 'application/json' : 'application/x-www-form-urlencoded');
+        request.headers['Accept'] = 'application/json';
+
+        for (var key in headers) { request.headers[key] = headers[key]; }
+        //打印出请求体
+        console.log(request.body)
+        //终止请求
+        //var err=new Error("xxx")
+        //err.request=request
+        //return Promise.reject(new Error(""))
+      
+        //可以显式返回request, 也可以不返回，没有返回值时拦截器中默认返回request
+        return request;
+    });
+    urlParts = parseUrl(url);
+    var baseURL = urlParts["protocol"]+"//"+urlParts["host"];
+    if (urlParts["port"]!="") {
+        baseUrl += ":"+urlParts['port'];
     }
+    fly.config.baseURL=baseUrl;
+    fly.request(urlParts['pathname'], body, {method: method}).then(resp=>{
+        callback(JSON.parse(resp), 200);
+    }).catch(err=>{
+         onRequestError(err); 
+    });
   }
 
   function __isTagCall(strings) {
